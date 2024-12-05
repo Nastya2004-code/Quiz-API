@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Квиз с Сервером</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .answer-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .answer-btn:hover {
+            background-color: #f0f0f0;
+        }
+        .answer-btn.correct {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .answer-btn.incorrect {
+            background-color: #F44336;
+            color: white;
+        }
+        #error-message {
+            color: red;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1>🧠 Квиз с Сервера</h1>
+        <div id="quiz-content">
+            <div class="loader"></div>
+            <p>Загрузка вопросов...</p>
+        </div>
+        <div id="error-message"></div>
+    </div>
+
+    <script>
+    class QuizApp {
+        constructor() {
+            this.quizContent = document.getElementById('quiz-content');
+            this.errorMessage = document.getElementById('error-message');
+            this.currentQuestionIndex = 0;
+            this.score = 0;
+            this.questions = [];
+
+            // Симулируем API сервера (в реальном приложении будет настоящий fetch)
+            this.serverUrl = this.mockServerUrl();
+            this.fetchQuestions();
+        }
+
+        // Имитация API-эндпоинта для получения вопросов
+        mockServerUrl() {
+            return {
+                getQuestions: () => {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve([
+                                {
+                                    "id": 1,
+                                    "question": "Столица России?",
+                                    "answers": ["Москва", "Санкт-Петербург", "Казань", "Новосибирск"],
+                                    "correctIndex": 0
+                                },
+                                {
+                                    "id": 2,
+                                    "question": "Сколько океанов на Земле?",
+                                    "answers": ["4", "5", "6", "7"],
+                                    "correctIndex": 1
+                                },
+                                {
+                                    "id": 3,
+                                    "question": "Какой самый большой программный язык?",
+                                    "answers": ["Python", "Java", "JavaScript", "C++"],
+                                    "correctIndex": 2
+                                }
+                            ]);
+                        }, 1500); // Имитация задержки сети
+                    });
+                }
+            };
+        }
+
+        async fetchQuestions() {
+            try {
+                this.questions = await this.serverUrl.getQuestions();
+                this.startQuiz();
+            } catch (error) {
+                this.showError("Не удалось загрузить вопросы");
+            }
+        }
+
+        startQuiz() {
+            this.currentQuestionIndex = 0;
+            this.score = 0;
+            this.renderQuestion();
+        }
+
+        renderQuestion() {
+            if (this.currentQuestionIndex >= this.questions.length) {
+                this.showResults();
+                return;
+            }
+
+            const currentQuestion = this.questions[this.currentQuestionIndex];
+            
+            this.quizContent.innerHTML = `
+                <h2>${currentQuestion.question}</h2>
+                <div id="answers">
+                    ${currentQuestion.answers.map((answer, index) => `
+                        <button 
+                            class="answer-btn" 
+                            onclick="quizApp.checkAnswer(${index})"
+                        >
+                            ${answer}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        checkAnswer(selectedIndex) {
+            const currentQuestion = this.questions[this.currentQuestionIndex];
+            const buttons = document.querySelectorAll('.answer-btn');
+
+            buttons.forEach(button => button.disabled = true);
+
+            if (selectedIndex === currentQuestion.correctIndex) {
+                buttons[selectedIndex].classList.add('correct');
+                this.score++;
+            } else {
+                buttons[selectedIndex].classList.add('incorrect');
+                buttons[currentQuestion.correctIndex].classList.add('correct');
+            }
+
+            setTimeout(() => {
+                this.currentQuestionIndex++;
+                this.renderQuestion();
+            }, 1000);
+        }
+
+        showResults() {
+            const percentScore = (this.score / this.questions.length) * 100;
+            
+            this.quizContent.innerHTML = `
+                <h2>Квиз окончен! 🎉</h2>
+                <p>Ваш результат: ${this.score} из ${this.questions.length}</p>
+                <p>Процент правильных ответов: ${percentScore.toFixed(2)}%</p>
+                <button class="answer-btn" onclick="quizApp.startQuiz()">
+                    Пройти квиз заново
+                </button>
+            `;
+        }
+
+        showError(message) {
+            this.errorMessage.textContent = message;
+        }
+    }
+
+    // Создаем глобальный экземпляр квиза
+    const quizApp = new QuizApp();
+    </script>
+</body>
+</html>
+Last edited 1 хвил
